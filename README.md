@@ -170,7 +170,7 @@ constraints, and local SQLite files.
 This is a local learning project.
 
 - Authentication and roles are not implemented.
-- CORS and frontend integration are follow-up tasks.
+- CORS is configured for the React client, and browser CRUD testing is complete.
 - POST and PATCH perform a write followed by a separate read, so a
   concurrent request can change the record before that read completes.
 - No automated test suite is included.

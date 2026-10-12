@@ -3,19 +3,24 @@ const { initializeDatabase } = require("./database");
 
 const app = express();
 const PORT = 3000;
+const cors = require("cors");
 
 app.use(express.json());
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type"],
+    credentials: false,
+  }),
+);
 
 // Validate user IDs before running SQL.
 function validateUserId(req, res, next) {
   const rawId = req.params.id;
   const userId = Number(rawId);
 
-  if (
-    !/^\d+$/.test(rawId) ||
-    !Number.isSafeInteger(userId) ||
-    userId <= 0
-  ) {
+  if (!/^\d+$/.test(rawId) || !Number.isSafeInteger(userId) || userId <= 0) {
     return res.status(422).json({
       detail: "User ID must be a positive integer.",
     });
@@ -137,15 +142,11 @@ async function startServer() {
       [],
       (error, users) => {
         if (error) {
-          return handleDatabaseError(
-            res,
-            error,
-            "Unable to retrieve users."
-          );
+          return handleDatabaseError(res, error, "Unable to retrieve users.");
         }
 
         return res.json(users);
-      }
+      },
     );
   });
 
@@ -156,11 +157,7 @@ async function startServer() {
       [req.userId],
       (error, user) => {
         if (error) {
-          return handleDatabaseError(
-            res,
-            error,
-            "Unable to retrieve user."
-          );
+          return handleDatabaseError(res, error, "Unable to retrieve user.");
         }
 
         if (!user) {
@@ -170,7 +167,7 @@ async function startServer() {
         }
 
         return res.json(user);
-      }
+      },
     );
   });
 
@@ -183,11 +180,7 @@ async function startServer() {
       [name, email],
       function (error) {
         if (error) {
-          return handleDatabaseError(
-            res,
-            error,
-            "Unable to create user."
-          );
+          return handleDatabaseError(res, error, "Unable to create user.");
         }
 
         const createdId = this.lastID;
@@ -200,7 +193,7 @@ async function startServer() {
               return handleDatabaseError(
                 res,
                 error,
-                "User was created, but could not be retrieved."
+                "User was created, but could not be retrieved.",
               );
             }
 
@@ -211,9 +204,9 @@ async function startServer() {
             }
 
             return res.status(201).json(user);
-          }
+          },
         );
-      }
+      },
     );
   });
 
@@ -241,16 +234,11 @@ async function startServer() {
 
       // Only fixed column names are inserted into SQL.
       // User values are passed separately through placeholders.
-      const sql =
-        `UPDATE users SET ${assignments.join(", ")} WHERE id = ?`;
+      const sql = `UPDATE users SET ${assignments.join(", ")} WHERE id = ?`;
 
       db.run(sql, values, function (error) {
         if (error) {
-          return handleDatabaseError(
-            res,
-            error,
-            "Unable to update user."
-          );
+          return handleDatabaseError(res, error, "Unable to update user.");
         }
 
         if (this.changes === 0) {
@@ -267,7 +255,7 @@ async function startServer() {
               return handleDatabaseError(
                 res,
                 error,
-                "User was updated, but could not be retrieved."
+                "User was updated, but could not be retrieved.",
               );
             }
 
@@ -278,38 +266,30 @@ async function startServer() {
             }
 
             return res.json(user);
-          }
+          },
         );
       });
-    }
+    },
   );
 
   // DELETE USER
   app.delete("/api/v1/users/:id", validateUserId, (req, res) => {
-    db.run(
-      "DELETE FROM users WHERE id = ?",
-      [req.userId],
-      function (error) {
-        if (error) {
-          return handleDatabaseError(
-            res,
-            error,
-            "Unable to delete user."
-          );
-        }
+    db.run("DELETE FROM users WHERE id = ?", [req.userId], function (error) {
+      if (error) {
+        return handleDatabaseError(res, error, "Unable to delete user.");
+      }
 
-        if (this.changes === 0) {
-          return res.status(404).json({
-            detail: "User not found.",
-          });
-        }
-
-        return res.json({
-          message: "User deleted successfully.",
-          id: req.userId,
+      if (this.changes === 0) {
+        return res.status(404).json({
+          detail: "User not found.",
         });
       }
-    );
+
+      return res.json({
+        message: "User deleted successfully.",
+        id: req.userId,
+      });
+    });
   });
 
   // Unknown URL or unsupported method.
